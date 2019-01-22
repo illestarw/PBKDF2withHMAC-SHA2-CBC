@@ -128,16 +128,8 @@ public class CryptoInstance {
      * Mode used for the {@link javax.crypto.Cipher}
      */
     public enum Mode {
-        /**
-         * Cipher Block Chaining Mode, as defined in <a href="http://csrc.nist.gov/publications/fips/fips81/fips81.htm">FIPS PUB
-         * 81</a>
-         */
-        CBC("CBC"),
-        /**
-         * Counter/CBC Mode, as defined in <a href="http://csrc.nist.gov/publications/nistpubs/800-38C/SP800-38C_updated-July20_2007.pdf">
-         * NIST Special Publication SP 800-38C</a>
-         */
-        CTR("CTR");
+        CBC("CBC");
+
 
         private String value;
 
