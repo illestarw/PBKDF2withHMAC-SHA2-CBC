@@ -40,7 +40,6 @@ public class CryptoLib {
             case AES:
                 switch (config.getMode()) {
                     case CBC:
-                    case CTR:
                         if (config.getIvLength() != 16) {
                             throw new IllegalArgumentException("CBC or CTR mode is selected but the IV length is not 16");
                         }
@@ -617,7 +616,6 @@ public class CryptoLib {
     private AlgorithmParameterSpec getAlgorithmParameterSpec(CryptoInstance.Mode mode, byte[] initializationVector) {
         switch (mode) {
             case CBC:
-            case CTR:
                 return new IvParameterSpec(initializationVector);
         }
 
