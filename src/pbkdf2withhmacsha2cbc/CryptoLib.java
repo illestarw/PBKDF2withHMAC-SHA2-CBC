@@ -14,14 +14,11 @@ import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 
-/**
- * The main CryptoLib API for encryption and decryption of byte arrays and files.
- */
+
 public class CryptoLib {
     private final CryptoInstance config;
     private final Cipher cipher;
 
-    // remove SuppressWarnings
     @SuppressWarnings("WeakerAccess")
     public CryptoLib(CryptoInstance config) {
         if (config == null ||
@@ -41,14 +38,14 @@ public class CryptoLib {
                 switch (config.getMode()) {
                     case CBC:
                         if (config.getIvLength() != 16) {
-                            throw new IllegalArgumentException("CBC or CTR mode is selected but the IV length is not 16");
+                            throw new IllegalArgumentException("AES-CBC is selected but the IV length is not 16");
                         }
                         break;
                 }
                 break;
-            case DES:
+            case DESede:
                 if (config.getIvLength() != 8) {
-                    throw new IllegalArgumentException("DES algorithm is selected but the IV length is not 8 " +
+                    throw new IllegalArgumentException("3DES algorithm is selected but the IV length is not 8 " +
                             "(" + config.getIvLength() + ")");
                 }
                 break;
@@ -56,9 +53,7 @@ public class CryptoLib {
 
         // PBKDF iterations validation
         switch (config.getPbkdf()) {
-            case PBKDF_2_WITH_HMAC_SHA_1:
             case PBKDF_2_WITH_HMAC_SHA_256:
-            case PBKDF_2_WITH_HMAC_SHA_384:
             case PBKDF_2_WITH_HMAC_SHA_512:
                 if (config.getIterations() <= 0) {
                     throw new IllegalArgumentException("PBKDF is selected, but the number of iterations is invalid");
@@ -77,7 +72,7 @@ public class CryptoLib {
 
 
     /**
-     * Generates an AES, DES, or 3DES key
+     * Generates an AES or 3DES key
      *
      * @param algorithm the key will be used with
      * @param keyLength length of key
@@ -94,10 +89,6 @@ public class CryptoLib {
         KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm.toString());
 
         int actualKeyLength = keyLength.bits();
-
-        if (algorithm == CryptoInstance.Algorithm.DES) {
-            actualKeyLength -= 8;
-        }
 
         keyGenerator.init(actualKeyLength);
 
@@ -130,8 +121,12 @@ public class CryptoLib {
      */
     private Mac getMac(CryptoInstance.MacAlgorithm macAlgorithm, char[] password) throws GeneralSecurityException {
         Mac mac = Mac.getInstance(macAlgorithm.toString());
-
-        mac.init(new SecretKeySpec(toBytes(password), macAlgorithm.toString()));
+        
+        // generate the initialization vector
+        byte[] initializationVector = generateInitializationVector();
+        
+        mac.init(deriveKey(password, initializationVector));
+        // mac.init(new SecretKeySpec(toBytes(password), macAlgorithm.toString()));
 
         return mac;
     }
@@ -560,16 +555,7 @@ public class CryptoLib {
             case NONE:
                 key = deriveKeyBytes(password);
                 break;
-            case SHA_1:
-            case SHA_224:
-            case SHA_256:
-            case SHA_384:
-            case SHA_512:
-                key = deriveShaKeyBytes(password);
-                break;
-            case PBKDF_2_WITH_HMAC_SHA_1:
             case PBKDF_2_WITH_HMAC_SHA_256:
-            case PBKDF_2_WITH_HMAC_SHA_384:
             case PBKDF_2_WITH_HMAC_SHA_512:
                 key = derivePbkdfKeyBytes(password, initializationVector);
                 break;
