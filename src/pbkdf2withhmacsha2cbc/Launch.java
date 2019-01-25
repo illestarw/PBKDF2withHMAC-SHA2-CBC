@@ -5,7 +5,12 @@
  */
 package pbkdf2withhmacsha2cbc;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.file.*;
+import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.security.GeneralSecurityException;
 import java.util.Scanner;
 import pbkdf2withhmacsha2cbc.CryptoInstance.*;
@@ -75,41 +80,65 @@ public class Launch {
             if (hmac == 1 || hmac == 2)
                 return hmac;
             else {
-                System.err.println("Invalid format");
+                System.err.println("Invalid number " + hmac + " for HMAC option");
                 return getHMACAlgorithm();
             }
         } catch (Exception e) {
             System.err.println("Invalid format" + e);
-            return getHMACAlgorithm();
+            return 1;
         }
     }
     
     private static int getIteration() {
-        int i;
+        int i = 1;
         try {
             Scanner sc = new Scanner(System.in);
-            i = sc.nextInt();
+            if (sc.hasNextInt()) {
+                i = sc.nextInt();
+            }
             if (i > 0)
                 return i;
             else {
-                System.err.println("Invalid format");
+                System.err.println("Invalid number " + i + " for iteration (must > 0)");
                 return getIteration();
             }
         } catch (Exception e) {
             System.err.println("Invalid format" + e);
-            return getIteration();
+            return 1;
+        }
+    }
+    
+    private static File getFileInstance() {
+        File f;
+        String fname = "";
+        try {
+            Scanner sc = new Scanner(System.in);
+            if (sc.hasNextLine()) {
+                fname = sc.nextLine();
+            }
+            Path p = Paths.get(System.getProperty("user.home"),"javaenc", fname);
+            f = p.toFile();
+            return f;
+        } catch (Exception e) {
+            System.err.println("Exception occured: " + e);
+            return getFileInstance();
         }
     }
     
     public static void main(String args[]) throws GeneralSecurityException, IOException
     {
         // Init
-        int hmac, iv = 0, iterate;
+        int hmac, iv = 0, iterate, datatype;
         Algorithm alg;
         KeyLength keylen;
         Pbkdf pbkdf = null;
         MacAlgorithm macalg = null;
-
+        String pwd = "password";
+        File fin, fout;
+        
+        
+        Scanner sc = new Scanner(System.in);
+        
         // Show menu
         System.out.println("============= Encryption Module =============");
         System.out.println("Select the algorithm for encryption:");
@@ -134,17 +163,47 @@ public class Launch {
         }
         System.out.println("Assign number of iterations:");
         iterate = getIteration();
+        System.out.println("Provide a password:");
+        if (sc.hasNextLine())
+            pwd = sc.nextLine();
+        //System.out.println("Select type of plaintext: ");
+        //System.out.println("[1] Byte String [2] File");
+        //datatype = getDataType();
+        System.out.println("Please put file under (user home directory)/javaenc in Linux or C:\\(user directory)\\javaenc in Windows.");
+        System.out.println("Specify plaintext filename: ");
+        fin = getFileInstance();
+        System.out.println("Specify output filename: ");
+        fout = getFileInstance();
         
+        /* test code for decryption */
+        Path p = Paths.get(System.getProperty("user.home"),"javaenc", "in_rev.txt");
+        File fin2 = p.toFile();
         
         CryptoLib cl = new CryptoLib(new CryptoInstance(alg, Mode.CBC, Padding.PKCS5_PADDING, keylen, pbkdf, macalg, iv, iterate));
 
-        byte[] encrypted = cl.encrypt("in".getBytes(), "pass".toCharArray());
-
-        for(byte b : encrypted){
-            System.out.print(b);
-        }
-        System.out.println();
+        cl.encrypt(fin, fout, pwd.toCharArray());
         
+        /* test code for decryption */
+        cl.decrypt(fout, fin2, pwd.toCharArray());
+        
+        System.out.println("Finished");
+        
+        /*
+        // Decrypt
+        UserDefinedFileAttributeView view = Files.getFileAttributeView(fin.toPath(), UserDefinedFileAttributeView.class);
+        int size;
+        String[] conf = {"alg", "keylen", "pbkdf", "macalg", "iv", "iterate"};
+        for (String c : conf){
+            size = view.size(c);
+            ByteBuffer buf = ByteBuffer.allocateDirect(size);
+            view.read(c, buf);
+            buf.flip();
+            switch(c){
+                case "alg":
+                        Charset.defaultCharset().decode(buf).toString();
+            }
+        }
+        */
     }
     
 }
