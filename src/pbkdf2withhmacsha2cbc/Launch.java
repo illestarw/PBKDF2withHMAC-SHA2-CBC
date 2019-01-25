@@ -150,7 +150,7 @@ public class Launch {
         KeyLength keylen;
         Pbkdf pbkdf = null;
         MacAlgorithm macalg = null;
-        String pwd = "password";
+        String pwd;
         File fin, fout;
         
         
@@ -186,6 +186,7 @@ public class Launch {
             System.out.println("Assign number of iterations:");
             iterate = getIteration();
             System.out.println("Provide a password:");
+            pwd = "";
             if (sc.hasNextLine())
                 pwd = sc.nextLine();
             //System.out.println("Select type of plaintext: ");
@@ -202,14 +203,25 @@ public class Launch {
             CryptoLib cl = new CryptoLib(new CryptoInstance(alg, Mode.CBC, Padding.PKCS5_PADDING, keylen, pbkdf, macalg, iv, iterate));
 
             cl.encrypt(fin, fout, pwd.toCharArray());
-
-            /* test code for decryption */
+        }
+        else if (module == 2) {
+            System.out.println("============= Decryption Module =============");
+            System.out.println("Please put file under (user home directory)/javaenc in Linux or C:\\(user directory)\\javaenc in Windows.");
+            System.out.println("Specify ciphertext filename: ");
+            fin = getFileInstance();
+            System.out.println("Specify output filename: ");
+            fout = getFileInstance();
+            System.out.println("Provide a password:");
+            pwd = "";
+            if (sc.hasNextLine())
+                pwd = sc.nextLine();
+            
             ExtractHeader eh = new ExtractHeader();
 
-            Path p = Paths.get(System.getProperty("user.home"),"javaenc", "in_rev.txt");
-            File fin2 = p.toFile();
-            CryptoLib cl2 = eh.parse(fout);
-            cl2.decrypt(fout, fin2, pwd.toCharArray());
+            //Path p = Paths.get(System.getProperty("user.home"),"javaenc", fin.getName() + "_reverse.txt");
+            //File fin2 = p.toFile();
+            CryptoLib cl2 = eh.parse(fin);
+            cl2.decrypt(fin, fout, pwd.toCharArray());
         }
         
         

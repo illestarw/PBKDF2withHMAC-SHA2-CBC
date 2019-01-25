@@ -77,7 +77,7 @@ public class CryptoLib {
 
 
     /**
-     * Generates an AES or 3DES key
+     * Generates an AES or 3DES key (not used)
      *
      * @param algorithm the key will be used with
      * @param keyLength length of key
@@ -235,6 +235,9 @@ public class CryptoLib {
             s += config.getMacAlgorithm().toString().substring(config.getMacAlgorithm().toString().length() - 3);
             s += String.format("%09d", config.getIterations());
             
+            //test
+            System.out.println(s.getBytes(StandardCharsets.UTF_8));
+            
             bufferedOutputStream.write(s.getBytes(StandardCharsets.UTF_8));
             
             // write the initialization vector
@@ -278,8 +281,6 @@ public class CryptoLib {
             view.write("iterate", Charset.defaultCharset().encode(String.valueOf(config.getIterations())));
             */
             
-            
-            return;
         } finally {
             closeStream(bufferedInputStream);
             closeStream(bufferedOutputStream);
@@ -370,7 +371,7 @@ public class CryptoLib {
             bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(output));
             bufferedInputStream = new BufferedInputStream(new FileInputStream(input));
             
-            // read configs from header
+            // discard header
             byte[] headerBytes = new byte[16];
 
             int headerBytesRead = bufferedInputStream.read(headerBytes);
@@ -418,7 +419,7 @@ public class CryptoLib {
             int bytesRead;
             int numBytesToProcess;
             byte[] inputStreamBuffer = new byte[4096];
-            long bytesLeft = input.length() - config.getIvLength();
+            long bytesLeft = input.length() - 16 - config.getIvLength(); // subtract header and iv length
 
             // subtract the mac length 
             if (mac != null) {
@@ -434,7 +435,10 @@ public class CryptoLib {
                 }
                 
                 bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, numBytesToProcess));
-
+                
+                //test
+                System.out.println(inputStreamBuffer);
+                
                 // reduce the number of bytes left
                 bytesLeft -= numBytesToProcess;
 
@@ -453,6 +457,7 @@ public class CryptoLib {
             if (mac != null && Arrays.equals(recMac, mac.doFinal())) {
                 throw new GeneralSecurityException("Received mac is different from calculated");
             }
+            
         } finally {
             closeStream(bufferedInputStream);
             closeStream(bufferedOutputStream);
@@ -460,7 +465,7 @@ public class CryptoLib {
     }
 
     /**
-     * Derives an AES (javax.crypto.spec.SecretKeySpec) using a password and iteration count .
+     * Derives an AES (javax.crypto.spec.SecretKeySpec) using a password and iteration count.
      *
      * @param password             the password
      * @param initializationVector used for PBKDF
@@ -509,6 +514,9 @@ public class CryptoLib {
         return initializationVector;
     }
 
+    /**
+     * Close streams after usage
+     */
     private void closeStream(Closeable stream) {
         if (stream != null) {
             try {
