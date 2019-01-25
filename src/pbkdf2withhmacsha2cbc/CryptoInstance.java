@@ -4,47 +4,50 @@ package pbkdf2withhmacsha2cbc;
 
 public class CryptoInstance {
 
-    private Algorithm alg;
+    private Algorithm algorithm;
     private Mode mode;
-    private Padding pad;
-    private KeyLength keylen;
+    private Padding padding;
+    private KeyLength keyLength;
     private Pbkdf pbkdf;
-    private MacAlgorithm macalg;
+    private MacAlgorithm macAlgorithm;
     private int ivLength;
     private int iterations;
 
     /**
-     * @param alg           the encryption algorithm
-     * @param mode          the encryption mode
-     * @param pad           the padding method
-     * @param keylen        the key length for encryption
-     * @param pbkdf         the PBKDF mode
-     * @param macalg        the MAC algorithm
-     * @param ivLength      the length of the initialization vector (byte) // i.e. bit / 8
-     * @param iterations    the number of iterations used for PBKDF modes
+     * Crypto configuration instance for the encryption and decryption in CryptoLib class.
+     * 
+     * @param algorithm         the encryption algorithm
+     * @param mode              the encryption mode
+     * @param padding           the padding method
+     * @param keyLength         the key length for encryption
+     * @param pbkdf             the PBKDF mode
+     * @param macAlgorithm      the MAC algorithm
+     * @param ivLength          the length of the initialization vector (byte) // i.e. bit / 8
+     * @param iterations        the number of iterations used for PBKDF modes
      */
+    
     @SuppressWarnings("WeakerAccess")
-    public CryptoInstance(Algorithm alg,
+    public CryptoInstance(Algorithm algorithm,
                         Mode mode,
-                        Padding pad,
-                        KeyLength keylen,
+                        Padding padding,
+                        KeyLength keyLength,
                         Pbkdf pbkdf,
-                        MacAlgorithm macalg,
+                        MacAlgorithm macAlgorithm,
                         int ivLength,
                         int iterations) {
-        this.alg = alg;
+        this.algorithm = algorithm;
         this.mode = mode;
-        this.pad = pad;
-        this.keylen = keylen;
+        this.padding = padding;
+        this.keyLength = keyLength;
         this.pbkdf = pbkdf;
-        this.macalg = macalg;
+        this.macAlgorithm = macAlgorithm;
         this.ivLength = ivLength;
         this.iterations = iterations;
     }
 
     @SuppressWarnings("WeakerAccess")
     public Algorithm getAlgorithm() {
-        return alg;
+        return algorithm;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -54,12 +57,12 @@ public class CryptoInstance {
 
     @SuppressWarnings("WeakerAccess")
     public Padding getPadding() {
-        return pad;
+        return padding;
     }
 
     @SuppressWarnings("WeakerAccess")
     public KeyLength getKeyLength() {
-        return keylen;
+        return keyLength;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -69,7 +72,7 @@ public class CryptoInstance {
 
     @SuppressWarnings("WeakerAccess")
     public MacAlgorithm getMacAlgorithm() {
-        return macalg;
+        return macAlgorithm;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -102,7 +105,7 @@ public class CryptoInstance {
     }
 
     /**
-     * Mode used for the javax.crypto.Cipher
+     * Mode used for the javax.crypto.Cipher (currently support CBC only)
      */
     public enum Mode {
         CBC("CBC");
