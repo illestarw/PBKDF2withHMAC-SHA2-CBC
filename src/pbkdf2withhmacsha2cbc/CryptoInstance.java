@@ -121,7 +121,7 @@ public class CryptoInstance {
     }
 
     /**
-     * Cipher alg pad
+     * Cipher algorithm padding
      */
     public enum Padding {
         NO_PADDING("NoPadding"),
