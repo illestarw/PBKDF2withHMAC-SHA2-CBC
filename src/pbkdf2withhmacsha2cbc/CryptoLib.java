@@ -6,11 +6,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.nio.file.FileStore;
-import java.nio.file.Files;
-import java.nio.file.attribute.UserDefinedFileAttributeView;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -25,16 +21,21 @@ public class CryptoLib {
 
     @SuppressWarnings("WeakerAccess")
     public CryptoLib(CryptoInstance config) {
-        if (config == null ||
-                config.getAlgorithm() == null ||
-                config.getMode() == null ||
-                config.getPadding() == null ||
-                config.getKeyLength() == null ||
-                config.getPbkdf() == null ||
-                config.getMacAlgorithm() == null) {
-
-            throw new IllegalArgumentException("Context, algorithm, mode, or padding is null");
-        }
+        if (config == null)
+            throw new IllegalArgumentException("Context is null");
+        else if (config.getAlgorithm() == null)
+            throw new IllegalArgumentException("Algorithm is null");
+        else if (config.getMode() == null)
+            throw new IllegalArgumentException("Mode is null");
+        else if (config.getPadding() == null)
+            throw new IllegalArgumentException("Padding is null");
+        else if (config.getKeyLength() == null)
+            throw new IllegalArgumentException("Key length is null");
+        else if (config.getPbkdf() == null)
+            throw new IllegalArgumentException("PBKDF type is null");
+        else if (config.getMacAlgorithm() == null)
+            throw new IllegalArgumentException("Mac algorithm is null");
+        
 
         // Algorithm/mode specific validation
         switch (config.getAlgorithm()) {
@@ -227,6 +228,15 @@ public class CryptoLib {
             bufferedInputStream = new BufferedInputStream(new FileInputStream(input));
             bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(output));
 
+            // write the header (encryption alg || keylen || hmackeylen || iteration), control length = 16
+            String s = "";
+            s += config.getAlgorithm().toString().charAt(0);
+            s += String.format("%03d", config.getKeyLength().bits());
+            s += config.getMacAlgorithm().toString().substring(config.getMacAlgorithm().toString().length() - 3);
+            s += String.format("%09d", config.getIterations());
+            
+            bufferedOutputStream.write(s.getBytes(StandardCharsets.UTF_8));
+            
             // write the initialization vector
             bufferedOutputStream.write(initializationVector);
 
@@ -252,6 +262,7 @@ public class CryptoLib {
                 bufferedOutputStream.write(mac.doFinal(finaleEncryptedBytes));
             }
             
+            /* not portable when upload/download
             // set metadata
             FileStore store = Files.getFileStore(output.toPath());
             if (!store.supportsFileAttributeView(UserDefinedFileAttributeView.class))
@@ -265,6 +276,7 @@ public class CryptoLib {
             view.write("macalg", Charset.defaultCharset().encode(config.getMacAlgorithm().toString()));
             view.write("iv", Charset.defaultCharset().encode(String.valueOf(config.getIvLength())));
             view.write("iterate", Charset.defaultCharset().encode(String.valueOf(config.getIterations())));
+            */
             
             
             return;
@@ -337,6 +349,7 @@ public class CryptoLib {
     @SuppressWarnings("WeakerAccess")
     public synchronized void decrypt(File input, File output, char[] password)
             throws GeneralSecurityException, IOException {
+        // recheck just in case
         if (input == null || !input.exists() || input.length() <= 0) {
             throw new IllegalArgumentException("Input file is either null or does not exist");
         }
@@ -353,10 +366,23 @@ public class CryptoLib {
         BufferedOutputStream bufferedOutputStream = null;
 
         try {
+            // setup streams
+            bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(output));
+            bufferedInputStream = new BufferedInputStream(new FileInputStream(input));
+            
+            // read configs from header
+            byte[] headerBytes = new byte[16];
+
+            int headerBytesRead = bufferedInputStream.read(headerBytes);
+
+            if (headerBytesRead < 16) {
+                throw new IOException("File doesn't contain information for decryption");
+            }
+            
             // read the mac 
             Mac mac = null;
             byte[] recMac = null;
-
+            
             if (config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE) {
                 mac = getMac(config.getMacAlgorithm(), password);
 
@@ -367,17 +393,13 @@ public class CryptoLib {
                 if (randomAccessFile.length() - mac.getMacLength() <= 0) {
                     throw new IOException("File does not contain sufficient data for decryption");
                 }
-
+                
                 randomAccessFile.seek(randomAccessFile.length() - mac.getMacLength());
                 randomAccessFile.read(recMac);
 
                 randomAccessFile.close();
             }
-
-            // setup streams
-            bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(output));
-            bufferedInputStream = new BufferedInputStream(new FileInputStream(input));
-
+            
             // read the initialization vector
             byte[] initializationVector = new byte[config.getIvLength()];
 
@@ -410,7 +432,7 @@ public class CryptoLib {
                 if (numBytesToProcess <= 0) {
                     break;
                 }
-
+                
                 bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, numBytesToProcess));
 
                 // reduce the number of bytes left

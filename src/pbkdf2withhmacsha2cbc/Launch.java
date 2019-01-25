@@ -21,6 +21,25 @@ import pbkdf2withhmacsha2cbc.CryptoInstance.*;
 
 public class Launch {
     
+    private static int getModule() {
+        int mod = 0;
+        try {
+            Scanner sc = new Scanner(System.in);
+            if (sc.hasNextInt()) {
+                mod = sc.nextInt();
+            }
+            if (mod == 1 || mod == 2) {
+                return mod;
+            } else {
+                System.err.println("Invalid number " + mod + " for module option");
+                return getModule();
+            }
+        } catch (Exception e) {
+            System.err.println("Invalid format" + e);
+            return 0;
+        }
+    }
+    
     private static Algorithm getEncryptionAlgorithm() {
         int alg = 0;
         try {
@@ -53,12 +72,10 @@ public class Launch {
             }
             switch(keylen) {
                 case 1:
-                    return KeyLength.BITS_64;
-                case 2:
                     return KeyLength.BITS_128;
-                case 3:
+                case 2:
                     return KeyLength.BITS_192;
-                case 4:
+                case 3:
                     return KeyLength.BITS_256;
                 default:
                     System.err.println("Invalid number " + keylen + " for key length option");
@@ -128,7 +145,7 @@ public class Launch {
     public static void main(String args[]) throws GeneralSecurityException, IOException
     {
         // Init
-        int hmac, iv = 0, iterate, datatype;
+        int hmac, iv = 0, iterate, module, datatype;
         Algorithm alg;
         KeyLength keylen;
         Pbkdf pbkdf = null;
@@ -140,72 +157,92 @@ public class Launch {
         Scanner sc = new Scanner(System.in);
         
         // Show menu
-        System.out.println("============= Encryption Module =============");
-        System.out.println("Select the algorithm for encryption:");
-        System.out.println("[1] 3DES [2] AES");
-        alg = getEncryptionAlgorithm();
-        if (alg == Algorithm.DESede)
-            iv = 8;
-        else if (alg == Algorithm.AES)
-            iv = 16;
-        System.out.println("Specify the key length for encryption algorithm:");
-        System.out.println("[1] 64 [2] 128 [3] 192 [4] 256");
-        keylen = getEncryptionKeyLen();
-        System.out.println("Select the HMAC algorithm:");
-        System.out.println("[1] SHA256 [2] SHA512");
-        hmac = getHMACAlgorithm();
-        if (hmac == 1) {
-            pbkdf = Pbkdf.PBKDF_2_WITH_HMAC_SHA_256;
-            macalg = MacAlgorithm.HMAC_SHA_256;
-        } else if (hmac == 2) {
-            pbkdf = Pbkdf.PBKDF_2_WITH_HMAC_SHA_512;
-            macalg = MacAlgorithm.HMAC_SHA_512;
-        }
-        System.out.println("Assign number of iterations:");
-        iterate = getIteration();
-        System.out.println("Provide a password:");
-        if (sc.hasNextLine())
-            pwd = sc.nextLine();
-        //System.out.println("Select type of plaintext: ");
-        //System.out.println("[1] Byte String [2] File");
-        //datatype = getDataType();
-        System.out.println("Please put file under (user home directory)/javaenc in Linux or C:\\(user directory)\\javaenc in Windows.");
-        System.out.println("Specify plaintext filename: ");
-        fin = getFileInstance();
-        System.out.println("Specify output filename: ");
-        fout = getFileInstance();
+        System.out.println("===========* PBKDF Implementation *===========");
+        System.out.println("Please Select Module:");
+        System.out.println("[1] Encryption [2] Decryption");
+        module = getModule();
+        if (module == 1) {
+            System.out.println("============= Encryption Module =============");
+            System.out.println("Select the algorithm for encryption:");
+            System.out.println("[1] 3DES [2] AES");
+            alg = getEncryptionAlgorithm();
+            if (alg == Algorithm.DESede)
+                iv = 8;
+            else if (alg == Algorithm.AES)
+                iv = 16;
+            System.out.println("Specify the key length for encryption algorithm:");
+            System.out.println("[1] 128 [2] 192 [3] 256");
+            keylen = getEncryptionKeyLen();
+            System.out.println("Select the HMAC algorithm:");
+            System.out.println("[1] SHA256 [2] SHA512");
+            hmac = getHMACAlgorithm();
+            if (hmac == 1) {
+                pbkdf = Pbkdf.PBKDF_2_WITH_HMAC_SHA_256;
+                macalg = MacAlgorithm.HMAC_SHA_256;
+            } else if (hmac == 2) {
+                pbkdf = Pbkdf.PBKDF_2_WITH_HMAC_SHA_512;
+                macalg = MacAlgorithm.HMAC_SHA_512;
+            }
+            System.out.println("Assign number of iterations:");
+            iterate = getIteration();
+            System.out.println("Provide a password:");
+            if (sc.hasNextLine())
+                pwd = sc.nextLine();
+            //System.out.println("Select type of plaintext: ");
+            //System.out.println("[1] Byte String [2] File");
+            //datatype = getDataType();
+            System.out.println("Please put file under (user home directory)/javaenc in Linux or C:\\(user directory)\\javaenc in Windows.");
+            System.out.println("Specify plaintext filename: ");
+            fin = getFileInstance();
+            System.out.println("Specify output filename: ");
+            fout = getFileInstance();
         
-        /* test code for decryption */
-        Path p = Paths.get(System.getProperty("user.home"),"javaenc", "in_rev.txt");
-        File fin2 = p.toFile();
         
-        CryptoLib cl = new CryptoLib(new CryptoInstance(alg, Mode.CBC, Padding.PKCS5_PADDING, keylen, pbkdf, macalg, iv, iterate));
+        
+            CryptoLib cl = new CryptoLib(new CryptoInstance(alg, Mode.CBC, Padding.PKCS5_PADDING, keylen, pbkdf, macalg, iv, iterate));
 
-        cl.encrypt(fin, fout, pwd.toCharArray());
+            cl.encrypt(fin, fout, pwd.toCharArray());
+
+            /* test code for decryption */
+            ExtractHeader eh = new ExtractHeader();
+
+            Path p = Paths.get(System.getProperty("user.home"),"javaenc", "in_rev.txt");
+            File fin2 = p.toFile();
+            CryptoLib cl2 = eh.parse(fout);
+            cl2.decrypt(fout, fin2, pwd.toCharArray());
+        }
         
-        /* test code for decryption */
-        cl.decrypt(fout, fin2, pwd.toCharArray());
         
-        System.out.println("Finished");
-        
-        /*
+        /* metadata approach, not portable when upload/download
         // Decrypt
-        UserDefinedFileAttributeView view = Files.getFileAttributeView(fin.toPath(), UserDefinedFileAttributeView.class);
-        int size;
+        UserDefinedFileAttributeView view = Files.getFileAttributeView(fout.toPath(), UserDefinedFileAttributeView.class);
+        int size,i=0;
         String[] conf = {"alg", "keylen", "pbkdf", "macalg", "iv", "iterate"};
+        //CryptoInstanceSetter cis = new CryptoInstanceSetter();
         for (String c : conf){
             size = view.size(c);
             ByteBuffer buf = ByteBuffer.allocateDirect(size);
             view.read(c, buf);
             buf.flip();
+            
             switch(c){
                 case "alg":
-                        Charset.defaultCharset().decode(buf).toString();
+                    if (Charset.defaultCharset().decode(buf).toString().equalsIgnoreCase("AES"))
+                        cis.setAlgorithm(Algorithm.AES);
+                    else if (Charset.defaultCharset().decode(buf).toString().equalsIgnoreCase("DESede"))
+                        cis.setAlgorithm(Algorithm.DESede);
+                    break;
+                case "keylen":
+                    System.out.print(Charset.defaultCharset().decode(buf).toString());
+                    if (Charset.defaultCharset().decode(buf).toString().equalsIgnoreCase("BITS_256"))
+                
+                    break;
             }
         }
         */
+        
+        System.out.println("Finished");
+        
     }
     
 }
-
-
