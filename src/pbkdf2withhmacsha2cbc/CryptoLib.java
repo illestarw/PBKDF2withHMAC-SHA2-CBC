@@ -12,7 +12,6 @@ import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
@@ -101,10 +100,7 @@ public class CryptoLib {
     }
 
     /**
-     * Performs a narrowing byte-to-char conversion
-     *
-     * @param chars input
-     * @return byte conversion
+     * byte-to-char conversion (not used)
      */
     private static byte[] toBytes(char[] chars) {
         byte[] bytes = new byte[chars.length];
@@ -112,7 +108,6 @@ public class CryptoLib {
         for (int i = 0; i < chars.length; i++) {
             bytes[i] = (byte) chars[i];
         }
-
         return bytes;
     }
 
