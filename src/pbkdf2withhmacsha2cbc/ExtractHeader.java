@@ -1,9 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package pbkdf2withhmacsha2cbc;
+
+/**
+ *
+ * @author Illestar
+ */
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -11,11 +12,16 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+
 /**
- *
- * @author Illestar
+ * Dedicated class for extracting the header of ciphertext and parse the configuration into CryptoInstance. 
+ * 
+ * @param input         the ciphertext file
+ * @return CryptoLib    instance initialized with parsed settings
  */
 public class ExtractHeader {
+    
+
     public synchronized CryptoLib parse(File input) throws IOException {
         if (input == null || !input.exists() || input.length() <= 0) {
             throw new IllegalArgumentException("Input file is either null or does not exist");
@@ -39,9 +45,10 @@ public class ExtractHeader {
         
         System.out.println(headerString);
 
-        // parse configs (encryption alg || keylen || hmackeylen || iteration) to CryptoInstance
+        // Initialize new Setter class
         CryptoInstanceSetter cis = new CryptoInstanceSetter();
         
+        // parse configs (encryption alg || keylen || hmackeylen || iteration) to CryptoInstance
         if (headerString.charAt(0) == 'A') {
             cis.setAlgorithm(CryptoInstance.Algorithm.AES);
             cis.setIvLength(16);

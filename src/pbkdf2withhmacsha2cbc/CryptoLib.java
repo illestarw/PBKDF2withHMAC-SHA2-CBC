@@ -14,13 +14,16 @@ import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 
-
+/**
+ * The main library for cryptography processes based on the configuration class CryptoInstance. 
+ */
 public class CryptoLib {
     private final CryptoInstance config;
     private final Cipher cipher;
 
     @SuppressWarnings("WeakerAccess")
     public CryptoLib(CryptoInstance config) {
+        // Context validation
         if (config == null)
             throw new IllegalArgumentException("Context is null");
         else if (config.getAlgorithm() == null)
@@ -77,10 +80,10 @@ public class CryptoLib {
 
 
     /**
-     * Generates an AES or 3DES key (not used)
+     * Generates an AES or 3DES key from System. (not used)
      *
-     * @param algorithm the key will be used with
-     * @param keyLength length of key
+     * @param algorithm                 the key will be used with
+     * @param keyLength                 length of key
      * @return a byte array
      * @throws GeneralSecurityException if either initialization or generation fails
      */
@@ -101,7 +104,7 @@ public class CryptoLib {
     }
 
     /**
-     * byte-to-char conversion (not used)
+     * simple char-to-byte conversion. (not used)
      */
     private static byte[] toBytes(char[] chars) {
         byte[] bytes = new byte[chars.length];
@@ -113,10 +116,10 @@ public class CryptoLib {
     }
 
     /**
-     * Gets a javax.crypto.Mac instance
+     * Initialize a javax.crypto.Mac instance
      *
      * @param macAlgorithm 
-     * @param password     a password
+     * @param password      password for deriving key
      * @return an initialized javax.crypto.Mac
      * @throws GeneralSecurityException if MAC initialization fails
      */
@@ -135,8 +138,8 @@ public class CryptoLib {
     /**
      * Encrypts a byte array using the supplied password  (not applicable yet)
      *
-     * @param input    the byte array input
-     * @param password the password
+     * @param input     the byte array input
+     * @param password  the password
      * @return an encrypted byte array
      * @throws GeneralSecurityException if initialization or encryption fails
      * @throws IOException if there's a problem constructing the result
@@ -179,9 +182,9 @@ public class CryptoLib {
     /**
      * Encrypts the input file using the supplied password
      *
-     * @param input    the input file
-     * @param output   the output file
-     * @param password the password
+     * @param input     the input file
+     * @param output    the output file
+     * @param password  the password
      * @throws GeneralSecurityException if initialization or encryption fails
      * @throws IOException              if there's a failure to read/write from/to the input/output file
      */
@@ -265,7 +268,8 @@ public class CryptoLib {
                 bufferedOutputStream.write(mac.doFinal(finaleEncryptedBytes));
             }
             
-            /* not portable when upload/download
+            /* deprecated due to metadata not portable when upload/download
+            
             // set metadata
             FileStore store = Files.getFileStore(output.toPath());
             if (!store.supportsFileAttributeView(UserDefinedFileAttributeView.class))
@@ -279,6 +283,7 @@ public class CryptoLib {
             view.write("macalg", Charset.defaultCharset().encode(config.getMacAlgorithm().toString()));
             view.write("iv", Charset.defaultCharset().encode(String.valueOf(config.getIvLength())));
             view.write("iterate", Charset.defaultCharset().encode(String.valueOf(config.getIterations())));
+            
             */
             
         } finally {
@@ -292,8 +297,8 @@ public class CryptoLib {
     /**
      * Decrypts a byte array using the supplied password  (not applicable yet)
      *
-     * @param input    the byte array input
-     * @param password the password
+     * @param input     the byte array input
+     * @param password  the password
      * @return a decrypted byte array
      * @throws GeneralSecurityException if initialization, decryption, or the MAC comparison fails
      */
@@ -341,9 +346,9 @@ public class CryptoLib {
     /**
      * Decrypts an input file using the supplied password
      *
-     * @param input    the input file
-     * @param output   the output file
-     * @param password the password
+     * @param input     the input file
+     * @param output    the output file
+     * @param password  the password
      * @throws GeneralSecurityException if initialization or decryption fails
      * @throws IOException              if there's a failure to read/write from/to the input/output file
      */
@@ -467,8 +472,8 @@ public class CryptoLib {
     /**
      * Derives an AES (javax.crypto.spec.SecretKeySpec) using a password and iteration count.
      *
-     * @param password             the password
-     * @param initializationVector used for PBKDF
+     * @param password              the password
+     * @param initializationVector  used for PBKDF
      * @return an AES (javax.crypto.spec.SecretKeySpec)
      * @throws GeneralSecurityException if initialization, decryption, or the MAC comparison fails
      */
@@ -492,6 +497,12 @@ public class CryptoLib {
                 .getEncoded();
     }
 
+    /**
+     * Specifies an initialization vector for ciphers under feedback mode
+     *
+     * @return IvParameterSpec extending AlgorithmParameterSpec 
+     * @throws IllegalArgumentException         On bad or unsupported mode settings
+     */
     private AlgorithmParameterSpec getAlgorithmParameterSpec(CryptoInstance.Mode mode, byte[] initializationVector) {
         switch (mode) {
             case CBC:
@@ -515,7 +526,7 @@ public class CryptoLib {
     }
 
     /**
-     * Close streams after usage
+     * Close streams after usage.
      */
     private void closeStream(Closeable stream) {
         if (stream != null) {

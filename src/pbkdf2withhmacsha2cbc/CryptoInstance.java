@@ -14,7 +14,7 @@ public class CryptoInstance {
     private int iterations;
 
     /**
-     * Crypto configuration instance for the encryption and decryption in CryptoLib class.
+     * An extendable Crypto configuration instance for the encryption and decryption in CryptoLib class.
      * 
      * @param algorithm         the encryption algorithm
      * @param mode              the encryption mode
@@ -86,7 +86,7 @@ public class CryptoInstance {
     }
 
     /**
-     * Algorithm used for javax.crypto.Cipher
+     * Algorithm used for javax.crypto.Cipher class.
      */
     public enum Algorithm {
         AES("AES"),
@@ -105,11 +105,10 @@ public class CryptoInstance {
     }
 
     /**
-     * Mode used for the javax.crypto.Cipher (currently support CBC only)
+     * Mode used for the javax.crypto.Cipher (currently support CBC only).
      */
     public enum Mode {
         CBC("CBC");
-
 
         private String value;
 
@@ -124,7 +123,7 @@ public class CryptoInstance {
     }
 
     /**
-     * Cipher algorithm padding
+     * Cipher algorithm padding.
      */
     public enum Padding {
         NO_PADDING("NoPadding"),
@@ -143,7 +142,7 @@ public class CryptoInstance {
     }
 
     /**
-     * Cipher key length
+     * Cipher key length.
      */
     public enum KeyLength {
         BITS_64(64),
@@ -170,13 +169,8 @@ public class CryptoInstance {
      * Supported Password Based Key Derivation Function (PBKDF) algorithms.
      */
     public enum Pbkdf {
-        /**
-         * Use password as it is.
-         */
         NONE("None"),
-
         PBKDF_2_WITH_HMAC_SHA_256("PBKDF2WithHmacSHA256"),
-
         PBKDF_2_WITH_HMAC_SHA_512("PBKDF2WithHmacSHA512");
 
         private final String value;

@@ -1,13 +1,28 @@
 
 package pbkdf2withhmacsha2cbc;
 
-import pbkdf2withhmacsha2cbc.CryptoInstance.*;
 /**
  *
  * @author Illestar
  */
+
+import pbkdf2withhmacsha2cbc.CryptoInstance.*;
+
 public class CryptoInstanceSetter {
 
+    /**
+     * The setter class with parameters initialized for building a CryptoInstance.
+     * 
+     * @param algorithm         the encryption algorithm
+     * @param mode              the encryption mode
+     * @param padding           the padding method
+     * @param keyLength         the key length for encryption
+     * @param pbkdf             the PBKDF mode
+     * @param macAlgorithm      the MAC algorithm
+     * @param ivLength          the length of the initialization vector (byte) // i.e. bit / 8
+     * @param iterations        the number of iterations used for PBKDF modes
+     */
+    
     private Algorithm algorithm = null;
     private Mode mode = Mode.CBC;
     private Padding padding = Padding.PKCS5_PADDING;

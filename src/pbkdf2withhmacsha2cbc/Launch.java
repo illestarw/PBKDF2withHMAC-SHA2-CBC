@@ -1,9 +1,16 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * @Project PBKDF2withHMAC-SHA2-CBC
+ * 
+ * An extendable framework for Java encryption implementation using Password-Based Key Derivation Function #2
+ * currently supporting AES / Triple DES cipher and SHA-256 / 512 HMAC algorithm under Cipher Block Chaining mode.
+ * 
  */
 package pbkdf2withhmacsha2cbc;
+
+/**
+ *
+ * @author Illestar
+ */
 
 import java.io.File;
 import java.io.IOException;
@@ -14,11 +21,10 @@ import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.security.GeneralSecurityException;
 import java.util.Scanner;
 import pbkdf2withhmacsha2cbc.CryptoInstance.*;
-/**
- *
- * @author Illestar
- */
 
+/**
+ * The main launcher for interactive menu.
+ */
 public class Launch {
     
     private static int getModule() {
@@ -161,6 +167,7 @@ public class Launch {
         System.out.println("Please Select Module:");
         System.out.println("[1] Encryption [2] Decryption");
         module = getModule();
+        
         if (module == 1) {
             System.out.println("============= Encryption Module =============");
             System.out.println("Select the algorithm for encryption:");
@@ -198,8 +205,7 @@ public class Launch {
             System.out.println("Specify output filename: ");
             fout = getFileInstance();
         
-        
-        
+            // Initialize new instance based on user-assigned configs
             CryptoLib cl = new CryptoLib(new CryptoInstance(alg, Mode.CBC, Padding.PKCS5_PADDING, keylen, pbkdf, macalg, iv, iterate));
 
             cl.encrypt(fin, fout, pwd.toCharArray());
@@ -216,16 +222,21 @@ public class Launch {
             if (sc.hasNextLine())
                 pwd = sc.nextLine();
             
+            // Initialize ExtractHeader for reading cipher settings
             ExtractHeader eh = new ExtractHeader();
 
             //Path p = Paths.get(System.getProperty("user.home"),"javaenc", fin.getName() + "_reverse.txt");
             //File fin2 = p.toFile();
+            
+            // parse configuration and build CryptoLib instance
             CryptoLib cl2 = eh.parse(fin);
+            
             cl2.decrypt(fin, fout, pwd.toCharArray());
         }
         
         
-        /* metadata approach, not portable when upload/download
+        /* deprecated due to metadata not portable when upload/download
+            
         // Decrypt
         UserDefinedFileAttributeView view = Files.getFileAttributeView(fout.toPath(), UserDefinedFileAttributeView.class);
         int size,i=0;
@@ -251,9 +262,10 @@ public class Launch {
                     break;
             }
         }
+        
         */
         
-        System.out.println("Finished");
+        System.out.println("Success.");
         
     }
     
