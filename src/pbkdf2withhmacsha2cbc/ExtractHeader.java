@@ -43,6 +43,7 @@ public class ExtractHeader {
 
         String headerString = new String(headerBytes, StandardCharsets.UTF_8);
         
+        //test: display stripped header
         System.out.println(headerString);
 
         // Initialize new Setter class

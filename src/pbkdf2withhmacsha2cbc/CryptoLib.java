@@ -238,7 +238,7 @@ public class CryptoLib {
             s += config.getMacAlgorithm().toString().substring(config.getMacAlgorithm().toString().length() - 3);
             s += String.format("%09d", config.getIterations());
             
-            //test
+            //test: display header
             System.out.println(s.getBytes(StandardCharsets.UTF_8));
             
             bufferedOutputStream.write(s.getBytes(StandardCharsets.UTF_8));
@@ -441,8 +441,8 @@ public class CryptoLib {
                 
                 bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, numBytesToProcess));
                 
-                //test
-                System.out.println(inputStreamBuffer);
+                //test: display buffer
+                System.out.println(inputStreamBuffer.toString());
                 
                 // reduce the number of bytes left
                 bytesLeft -= numBytesToProcess;
