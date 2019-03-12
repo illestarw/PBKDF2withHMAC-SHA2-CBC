@@ -1,0 +1,28 @@
+Parsing the algorithm based on just one character could be fragile.
+
+If the key length isn't something you expect, you never set it. Should fail the parse if something unexpected happens.
+
+Designating a hashing algorithm purely on the basis of bits is fragile. If I gave you a follow-on assignment to support sha3, you'd have to redesign the header.
+
+Same problem as above - if the hash argument were unexpected, it would never get set.
+
+No validation on iterations.
+
+If there's a lot of dead code, don't comment it out, delete it. If you wanted to go back, that's what source code control is for.
+
+better require more than one iteration.
+
+Why does the header block for this say not used?  I see a call to it
+
+This condition should result in failure - 
+config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE
+
+HMAC doesn't cover IV, serious flaw
+
+If I'm reading this right, you're using the password itself as the HMAC secret. This is a very bad error. The attacker has the cipher text, and the attacker has the HMAC. Given both of those, they can now easily brute force the password. 
+
+You also have to check the HMAC before decrypting, not after. This is a padding oracle.
+
+Arrays.equals is almost certainly not constant time
+
+Using the IV as the salt is a bit odd, but it works out OK in the case of AES. It results in only 64 bits of salt in the case of 3DES, which isn't good.

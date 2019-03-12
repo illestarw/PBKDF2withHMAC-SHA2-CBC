@@ -13,14 +13,15 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 
-/**
- * Dedicated class for extracting the header of ciphertext and parse the configuration into CryptoInstance. 
- * 
- * @param input         the ciphertext file
- * @return CryptoLib    instance initialized with parsed settings
- */
+
 public class ExtractHeader {
-    
+        
+    /**
+     * Dedicated class method for extracting the header of ciphertext and parse the configuration into CryptoInstance. 
+     * 
+     * @param input         the ciphertext file
+     * @return CryptoLib instance initialized with parsed settings
+     */
 
     public synchronized CryptoLib parse(File input) throws IOException {
         if (input == null || !input.exists() || input.length() <= 0) {
