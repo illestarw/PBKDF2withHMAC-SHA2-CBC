@@ -234,37 +234,6 @@ public class Launch {
             cl2.decrypt(fin, fout, pwd.toCharArray());
         }
         
-        
-        /* deprecated due to metadata not portable when upload/download
-            
-        // Decrypt
-        UserDefinedFileAttributeView view = Files.getFileAttributeView(fout.toPath(), UserDefinedFileAttributeView.class);
-        int size,i=0;
-        String[] conf = {"alg", "keylen", "pbkdf", "macalg", "iv", "iterate"};
-        //CryptoInstanceSetter cis = new CryptoInstanceSetter();
-        for (String c : conf){
-            size = view.size(c);
-            ByteBuffer buf = ByteBuffer.allocateDirect(size);
-            view.read(c, buf);
-            buf.flip();
-            
-            switch(c){
-                case "alg":
-                    if (Charset.defaultCharset().decode(buf).toString().equalsIgnoreCase("AES"))
-                        cis.setAlgorithm(Algorithm.AES);
-                    else if (Charset.defaultCharset().decode(buf).toString().equalsIgnoreCase("DESede"))
-                        cis.setAlgorithm(Algorithm.DESede);
-                    break;
-                case "keylen":
-                    System.out.print(Charset.defaultCharset().decode(buf).toString());
-                    if (Charset.defaultCharset().decode(buf).toString().equalsIgnoreCase("BITS_256"))
-                
-                    break;
-            }
-        }
-        
-        */
-        
         System.out.println("Success.");
         
     }
