@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
+
 
 /**
  * The main library for cryptography processes based on the configuration class CryptoInstance. 
@@ -291,7 +291,7 @@ public class CryptoLib {
                 throw new IOException("File doesn't contain information for decryption");
             }
             
-            // read the mac 
+            // read the mac given in file
             Mac mac = null;
             byte[] recMac = null;
             
@@ -328,7 +328,7 @@ public class CryptoLib {
 
             // allocate loop buffers and variables
             int bytesRead;
-            int numBytesToProcess;
+            long numBytesToProcess;
             byte[] inputStreamBuffer = new byte[4096];
             long bytesLeft = input.length() - 16 - config.getIvLength(); // subtract header and iv length
 
@@ -337,62 +337,72 @@ public class CryptoLib {
                 bytesLeft -= mac.getMacLength();
             }
 
-            // calculate HMAC from given file
+            // set up marker in order to revisit later for decryption
+            long bytesLeft_pre = bytesLeft;
+            if (bufferedInputStream.markSupported()) {
+                // readLimit in mark is just a suggested value, drops only when out of space in buffer
+                bufferedInputStream.mark((int) bytesLeft);
+            } else {
+                throw new IOException("Unsupported stream type");
+            }
+            
+            // calculate mac from given file
             while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
-                numBytesToProcess = (bytesRead < bytesLeft) ? bytesRead : (int) bytesLeft;
-                
+
+                numBytesToProcess = (bytesRead < bytesLeft_pre) ? bytesRead : bytesLeft_pre;
+
                 // prevent exception
                 if (numBytesToProcess <= 0) {
                     break;
                 }
                 
-                bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, numBytesToProcess));
-                
                 //test: display buffer
-                System.out.println(inputStreamBuffer.toString());
+                System.out.println("read_for_mac: " + inputStreamBuffer.toString());
                 
                 // reduce the number of bytes left
-                bytesLeft -= numBytesToProcess;
+                bytesLeft_pre -= numBytesToProcess;
 
                 // compute the mac 
                 if (mac != null) {
-                    mac.update(inputStreamBuffer, 0, numBytesToProcess);
+                    // overflow should not occur. protect with safe conversion just in case
+                    mac.update(inputStreamBuffer, 0, Math.toIntExact(numBytesToProcess));
                 }
             }
             
             // compare the mac using java.security.MessageDigest.isEqual
             // Require versions later than Java SE 6 Update 17, prior versions are not time-constant and may subject to timing attack
-            if (mac != null && MessageDigest.isEqual(recMac, mac.doFinal())) {
+            if (mac != null && !MessageDigest.isEqual(recMac, mac.doFinal())) {
+                
                 throw new GeneralSecurityException("Received mac is different from calculated");
-            }
+                
+            } else {
             
-            // decrypt
-            while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
-                numBytesToProcess = (bytesRead < bytesLeft) ? bytesRead : (int) bytesLeft;
+                bufferedInputStream.reset();
                 
-                // prevent exception
-                if (numBytesToProcess <= 0) {
-                    break;
-                }
-                
-                bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, numBytesToProcess));
-                
-                //test: display buffer
-                System.out.println(inputStreamBuffer.toString());
-                
-                // reduce the number of bytes left
-                bytesLeft -= numBytesToProcess;
+                // decrypt
+                while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
+                    numBytesToProcess = (bytesRead < bytesLeft) ? bytesRead : bytesLeft;
 
-                // compute the mac 
-                if (mac != null) {
-                    mac.update(inputStreamBuffer, 0, numBytesToProcess);
+                    // prevent exception
+                    if (numBytesToProcess <= 0) {
+                        break;
+                    }
+                    
+                    // overflow should not occur. protect with safe conversion just in case
+                    bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, Math.toIntExact(numBytesToProcess)));
+
+                    //test: display buffer
+                    System.out.println("read_for_decrypt: " + inputStreamBuffer.toString());
+
+                    // reduce the number of bytes left
+                    bytesLeft -= numBytesToProcess;
                 }
+
+                // finalize the cipher
+                byte[] finalDecBytes = cipher.doFinal();
+
+                bufferedOutputStream.write(finalDecBytes);
             }
-
-            // finalize the cipher
-            byte[] finalDecBytes = cipher.doFinal();
-
-            bufferedOutputStream.write(finalDecBytes);
 
         } finally {
             closeStream(bufferedInputStream);
