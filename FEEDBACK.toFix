@@ -23,6 +23,3 @@ If I'm reading this right, you're using the password itself as the HMAC secret. 
 
 You also have to check the HMAC before decrypting, not after. This is a padding oracle.
 
-Arrays.equals is almost certainly not constant time
-
-Using the IV as the salt is a bit odd, but it works out OK in the case of AES. It results in only 64 bits of salt in the case of 3DES, which isn't good.

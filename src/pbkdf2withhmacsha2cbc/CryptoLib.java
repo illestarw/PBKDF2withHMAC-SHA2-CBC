@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
@@ -136,50 +137,6 @@ public class CryptoLib {
     }
 
     /**
-     * Encrypts a byte array using the supplied password  (not applicable yet)
-     *
-     * @param input     the byte array input
-     * @param password  the password
-     * @return an encrypted byte array
-     * @throws GeneralSecurityException if initialization or encryption fails
-     * @throws IOException if there's a problem constructing the result
-     */
-    @SuppressWarnings("WeakerAccess")
-    public synchronized byte[] encrypt(byte[] input, char[] password) throws GeneralSecurityException, IOException {
-        if (input == null || input.length == 0) {
-            throw new IllegalArgumentException("Input is either null or empty");
-        }
-
-        if (password == null || password.length == 0) {
-            throw new IllegalArgumentException("Password is either null or empty");
-        }
-
-        // generate the initialization vector
-        byte[] initializationVector = generateInitializationVector();
-
-        // initialize the cipher
-        cipher.init(Cipher.ENCRYPT_MODE,
-                deriveKey(password, initializationVector),
-                getAlgorithmParameterSpec(config.getMode(), initializationVector));
-
-        // encrypt
-        byte[] encryptedBytes = cipher.doFinal(input);
-
-        // construct the output (IV || CIPHER)
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-
-        output.write(cipher.getIV());
-        output.write(encryptedBytes);
-
-        // compute the MAC and append the MAC (IV || CIPHER || MAC)
-        if (config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE) {
-            output.write(getMac(config.getMacAlgorithm(), password).doFinal(encryptedBytes));
-        }
-
-        return output.toByteArray();
-    }
-
-    /**
      * Encrypts the input file using the supplied password
      *
      * @param input     the input file
@@ -292,57 +249,6 @@ public class CryptoLib {
         }
     }
 
-    
-
-    /**
-     * Decrypts a byte array using the supplied password  (not applicable yet)
-     *
-     * @param input     the byte array input
-     * @param password  the password
-     * @return a decrypted byte array
-     * @throws GeneralSecurityException if initialization, decryption, or the MAC comparison fails
-     */
-    @SuppressWarnings("WeakerAccess")
-    public synchronized byte[] decrypt(byte[] input, char[] password) throws GeneralSecurityException {
-        if (input == null || input.length == 0) {
-            throw new IllegalArgumentException("Input is either null or empty");
-        }
-
-        if (password == null || password.length == 0) {
-            throw new IllegalArgumentException("Password is either null or empty");
-        }
-
-        // deconstruct the input
-        byte[] initializationVector = Arrays.copyOfRange(input, 0, config.getIvLength());
-
-        byte[] cipherText;
-
-        // extract the MAC
-        if (config.getMacAlgorithm() == CryptoInstance.MacAlgorithm.NONE) {
-            cipherText = Arrays.copyOfRange(input, config.getIvLength(), input.length);
-        } else {
-            Mac mac = getMac(config.getMacAlgorithm(), password);
-
-            cipherText = Arrays.copyOfRange(input, config.getIvLength(), input.length - mac.getMacLength());
-            byte[] recMac = Arrays.copyOfRange(input, input.length - mac.getMacLength(), input.length);
-
-            // compute the mac
-            byte[] macBytes = mac.doFinal(cipherText);
-
-            // verify the macs are the same
-            if (!Arrays.equals(recMac, macBytes)) {
-                throw new GeneralSecurityException("Received mac is different from calculated");
-            }
-        }
-
-        // initialize the cipher
-        cipher.init(Cipher.DECRYPT_MODE,
-                deriveKey(password, initializationVector),
-                getAlgorithmParameterSpec(config.getMode(), initializationVector));
-
-        return cipher.doFinal(cipherText);
-    }
-
     /**
      * Decrypts an input file using the supplied password
      *
@@ -431,10 +337,40 @@ public class CryptoLib {
                 bytesLeft -= mac.getMacLength();
             }
 
+            // calculate HMAC from given file
+            while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
+                numBytesToProcess = (bytesRead < bytesLeft) ? bytesRead : (int) bytesLeft;
+                
+                // prevent exception
+                if (numBytesToProcess <= 0) {
+                    break;
+                }
+                
+                bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, numBytesToProcess));
+                
+                //test: display buffer
+                System.out.println(inputStreamBuffer.toString());
+                
+                // reduce the number of bytes left
+                bytesLeft -= numBytesToProcess;
+
+                // compute the mac 
+                if (mac != null) {
+                    mac.update(inputStreamBuffer, 0, numBytesToProcess);
+                }
+            }
+            
+            // compare the mac using java.security.MessageDigest.isEqual
+            // Require versions later than Java SE 6 Update 17, prior versions are not time-constant and may subject to timing attack
+            if (mac != null && MessageDigest.isEqual(recMac, mac.doFinal())) {
+                throw new GeneralSecurityException("Received mac is different from calculated");
+            }
+            
             // decrypt
             while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
                 numBytesToProcess = (bytesRead < bytesLeft) ? bytesRead : (int) bytesLeft;
-
+                
+                // prevent exception
                 if (numBytesToProcess <= 0) {
                     break;
                 }
@@ -458,11 +394,6 @@ public class CryptoLib {
 
             bufferedOutputStream.write(finalDecBytes);
 
-            // compare the mac
-            if (mac != null && Arrays.equals(recMac, mac.doFinal())) {
-                throw new GeneralSecurityException("Received mac is different from calculated");
-            }
-            
         } finally {
             closeStream(bufferedInputStream);
             closeStream(bufferedOutputStream);
@@ -480,18 +411,18 @@ public class CryptoLib {
     private SecretKey deriveKey(char[] password, byte[] initializationVector) throws GeneralSecurityException {
         byte[] key = null;
 
-        key = derivePbkdfKeyBytes(password, initializationVector); // use IV as salt
+        key = derivePbkdfKeyBytes(password, generateSalt());
 
         return new SecretKeySpec(key, config.getAlgorithm().toString());
     }
 
-    private byte[] derivePbkdfKeyBytes(char[] password, byte[] initializationVector)
+    private byte[] derivePbkdfKeyBytes(char[] password, byte[] salt)
             throws InvalidKeySpecException, NoSuchAlgorithmException {
         return SecretKeyFactory.getInstance(config.getPbkdf().toString())
                 .generateSecret(
                         new PBEKeySpec(
                                 password,
-                                initializationVector, // use IV as salt
+                                salt,
                                 config.getIterations(),
                                 config.getKeyLength().bits()))
                 .getEncoded();
@@ -513,7 +444,7 @@ public class CryptoLib {
     }
 
     /**
-     * Generates an initialization vector using java.security.SecureRandom as the number generator
+     * Generates an initialization vector using java.security.SecureRandom as RNG
      *
      * @return a byte array
      */
@@ -523,6 +454,19 @@ public class CryptoLib {
         new SecureRandom().nextBytes(initializationVector);
 
         return initializationVector;
+    }
+    
+    /**
+     * Generates a salt with a constant length of 256 bits using java.security.SecureRandom as RNG
+     *
+     * @return a byte array
+     */
+    private byte[] generateSalt() {
+        byte[] salt = new byte[32];
+
+        new SecureRandom().nextBytes(salt);
+
+        return salt;
     }
 
     /**
