@@ -10,6 +10,3 @@ Why does the header block for this say not used?  I see a call to it
 
 This condition should result in failure - 
 config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE
-
-HMAC doesn't cover IV, serious flaw
-
