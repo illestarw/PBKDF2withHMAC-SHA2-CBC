@@ -1,14 +1,10 @@
 Parsing the algorithm based on just one character could be fragile.
 
-If the key length isn't something you expect, you never set it. Should fail the parse if something unexpected happens.
-
 Designating a hashing algorithm purely on the basis of bits is fragile. If I gave you a follow-on assignment to support sha3, you'd have to redesign the header.
 
 Same problem as above - if the hash argument were unexpected, it would never get set.
 
 No validation on iterations.
-
-better require more than one iteration.
 
 Why does the header block for this say not used?  I see a call to it
 

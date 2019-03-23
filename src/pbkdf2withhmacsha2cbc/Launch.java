@@ -119,9 +119,12 @@ public class Launch {
             if (sc.hasNextInt()) {
                 i = sc.nextInt();
             }
-            if (i > 0)
+            if (i > 1)
                 return i;
-            else {
+            else if (i > 0) {
+                System.err.println("Iteration " + i + " is not sufficient (recommend > 1)");
+                return getIteration();
+            } else {
                 System.err.println("Invalid number " + i + " for iteration (must > 0)");
                 return getIteration();
             }
@@ -233,7 +236,7 @@ public class Launch {
             cl2.decrypt(fin, fout, pwd.toCharArray());
         }
         
-        System.out.println("\n Process Succeeded.");
+        System.out.println("\n* Process Succeeded. *");
         
     }
     

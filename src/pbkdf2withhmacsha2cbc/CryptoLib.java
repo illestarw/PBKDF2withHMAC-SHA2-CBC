@@ -143,14 +143,18 @@ public class CryptoLib {
             s += config.getMacAlgorithm().toString().substring(config.getMacAlgorithm().toString().length() - 3);
             s += String.format("%09d", config.getIterations());
             
-            //debug: display header
-            System.out.println(s.getBytes(StandardCharsets.UTF_8));
+            //debug: display header bytes
+            // System.out.println("header_info: " + s.getBytes(StandardCharsets.UTF_8));
             
             bufferedOutputStream.write(s.getBytes(StandardCharsets.UTF_8));
             
-            // write the initialization vector
+            // process the initialization vector
             bufferedOutputStream.write(initializationVector);
-
+            if (mac != null) {
+                    mac.update(initializationVector);
+            }
+            
+            // process data from input file
             while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
                 // encrypt
                 encryptedBytes = cipher.update(inputStreamBuffer, 0, bytesRead);
@@ -212,7 +216,7 @@ public class CryptoLib {
             bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(output));
             bufferedInputStream = new BufferedInputStream(new FileInputStream(input));
             
-            // discard header
+            // discard header (parsed in ExtractHeader class)
             byte[] headerBytes = new byte[16];
 
             int headerBytesRead = bufferedInputStream.read(headerBytes);
@@ -230,14 +234,15 @@ public class CryptoLib {
                 throw new IOException("File doesn't contain an IV");
             }
             
-            // read the mac given in file
+            // allocate variables for Message Authentication Codes
             Mac mac = null;
-            byte[] recMac = null;
+            byte[] fileMac = null;
             
+            // read the mac given in file
             if (config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE) {
                 mac = getMac(config.getMacAlgorithm(), password, initializationVector);
 
-                recMac = new byte[mac.getMacLength()];
+                fileMac = new byte[mac.getMacLength()];
 
                 RandomAccessFile randomAccessFile = new RandomAccessFile(input, "r");
 
@@ -246,11 +251,16 @@ public class CryptoLib {
                 }
                 
                 randomAccessFile.seek(randomAccessFile.length() - mac.getMacLength());
-                randomAccessFile.read(recMac);
+                randomAccessFile.read(fileMac);
 
                 randomAccessFile.close();
             }
 
+            // calculate mac for IV from given file
+            if (mac != null) {
+                    mac.update(initializationVector);
+            }
+            
             // allocate loop buffers and variables
             int bytesRead;
             long numBytesToProcess;
@@ -271,7 +281,7 @@ public class CryptoLib {
                 throw new IOException("Unsupported stream type");
             }
             
-            // calculate mac from given file
+            // calculate mac for encrypted data from given file
             while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
 
                 numBytesToProcess = (bytesRead < bytesLeft_pre) ? bytesRead : bytesLeft_pre;
@@ -296,7 +306,7 @@ public class CryptoLib {
             
             // compare the mac using java.security.MessageDigest.isEqual
             // Require versions later than Java SE 6 Update 17, prior versions are not time-constant and may subject to timing attack
-            if (mac != null && !MessageDigest.isEqual(recMac, mac.doFinal())) {
+            if (mac != null && !MessageDigest.isEqual(fileMac, mac.doFinal())) {
                 
                 throw new GeneralSecurityException("Received mac is different from calculated");
                 
@@ -368,9 +378,8 @@ public class CryptoLib {
      * @throws GeneralSecurityException if initialization, decryption, or the MAC comparison fails
      */
     private SecretKey deriveKey(char[] password, byte[] initializationVector) throws GeneralSecurityException, IOException {
-        byte[] key = null;
-
-        key = derivePbkdfKeyBytes(password, extendSalt(initializationVector));
+        
+        byte[] key = derivePbkdfKeyBytes(password, extendSalt(initializationVector));
 
         return new SecretKeySpec(key, config.getAlgorithm().toString());
     }
