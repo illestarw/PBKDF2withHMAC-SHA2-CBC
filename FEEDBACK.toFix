@@ -8,8 +8,6 @@ Same problem as above - if the hash argument were unexpected, it would never get
 
 No validation on iterations.
 
-If there's a lot of dead code, don't comment it out, delete it. If you wanted to go back, that's what source code control is for.
-
 better require more than one iteration.
 
 Why does the header block for this say not used?  I see a call to it
@@ -18,8 +16,4 @@ This condition should result in failure -
 config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE
 
 HMAC doesn't cover IV, serious flaw
-
-If I'm reading this right, you're using the password itself as the HMAC secret. This is a very bad error. The attacker has the cipher text, and the attacker has the HMAC. Given both of those, they can now easily brute force the password. 
-
-You also have to check the HMAC before decrypting, not after. This is a padding oracle.
 

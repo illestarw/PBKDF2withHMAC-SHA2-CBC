@@ -151,7 +151,7 @@ public class Launch {
     public static void main(String args[]) throws GeneralSecurityException, IOException
     {
         // Init
-        int hmac, iv = 0, iterate, module, datatype;
+        int hmac, iv = 0, iterate, module;
         Algorithm alg;
         KeyLength keylen;
         Pbkdf pbkdf = null;
@@ -196,9 +196,7 @@ public class Launch {
             pwd = "";
             if (sc.hasNextLine())
                 pwd = sc.nextLine();
-            //System.out.println("Select type of plaintext: ");
-            //System.out.println("[1] Byte String [2] File");
-            //datatype = getDataType();
+
             System.out.println("Please put file under (user home directory)/javaenc in Linux or C:\\(user directory)\\javaenc in Windows.");
             System.out.println("Specify plaintext filename: ");
             fin = getFileInstance();
@@ -225,8 +223,9 @@ public class Launch {
             // Initialize ExtractHeader for reading cipher settings
             ExtractHeader eh = new ExtractHeader();
 
-            //Path p = Paths.get(System.getProperty("user.home"),"javaenc", fin.getName() + "_reverse.txt");
-            //File fin2 = p.toFile();
+            //debug: auto-test
+            // Path p = Paths.get(System.getProperty("user.home"),"javaenc", fin.getName() + "_reverse.txt");
+            // File fin2 = p.toFile();
             
             // parse configuration and build CryptoLib instance
             CryptoLib cl2 = eh.parse(fin);
@@ -234,7 +233,7 @@ public class Launch {
             cl2.decrypt(fin, fout, pwd.toCharArray());
         }
         
-        System.out.println("Success.");
+        System.out.println("\n Process Succeeded.");
         
     }
     

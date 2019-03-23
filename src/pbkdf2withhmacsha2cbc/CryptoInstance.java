@@ -145,7 +145,6 @@ public class CryptoInstance {
      * Cipher key length.
      */
     public enum KeyLength {
-        BITS_64(64),
         BITS_128(128),
         BITS_192(192),
         BITS_256(256);

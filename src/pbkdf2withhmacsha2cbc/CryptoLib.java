@@ -57,6 +57,10 @@ public class CryptoLib {
                     throw new IllegalArgumentException("3DES algorithm is selected but the IV length is not 8 " +
                             "(" + config.getIvLength() + ")");
                 }
+                if (config.getKeyLength() != CryptoInstance.KeyLength.BITS_192) {
+                    throw new IllegalArgumentException("3DES algorithm is selected but the Key length is not (168 out of) 192 bits " +
+                            "(" + config.getKeyLength() + ") [only Keying option 1 is supported]");
+                }
                 break;
         }
 
@@ -77,63 +81,6 @@ public class CryptoLib {
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
-    }
-
-
-    /**
-     * Generates an AES or 3DES key from System. (not used)
-     *
-     * @param algorithm                 the key will be used with
-     * @param keyLength                 length of key
-     * @return a byte array
-     * @throws GeneralSecurityException if either initialization or generation fails
-     */
-    @SuppressWarnings("WeakerAccess")
-    public static byte[] generateKey(CryptoInstance.Algorithm algorithm, CryptoInstance.KeyLength keyLength)
-            throws GeneralSecurityException {
-        if (algorithm == null || keyLength == null) {
-            throw new IllegalArgumentException("Algorithm or key length is null");
-        }
-
-        KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm.toString());
-
-        int actualKeyLength = keyLength.bits();
-
-        keyGenerator.init(actualKeyLength);
-
-        return keyGenerator.generateKey().getEncoded();
-    }
-
-    /**
-     * simple char-to-byte conversion. (not used)
-     */
-    private static byte[] toBytes(char[] chars) {
-        byte[] bytes = new byte[chars.length];
-
-        for (int i = 0; i < chars.length; i++) {
-            bytes[i] = (byte) chars[i];
-        }
-        return bytes;
-    }
-
-    /**
-     * Initialize a javax.crypto.Mac instance
-     *
-     * @param macAlgorithm 
-     * @param password      password for deriving key
-     * @return an initialized javax.crypto.Mac
-     * @throws GeneralSecurityException if MAC initialization fails
-     */
-    private Mac getMac(CryptoInstance.MacAlgorithm macAlgorithm, char[] password) throws GeneralSecurityException {
-        Mac mac = Mac.getInstance(macAlgorithm.toString());
-        
-        // generate the initialization vector
-        byte[] initializationVector = generateInitializationVector();
-        
-        mac.init(deriveKey(password, initializationVector));
-        // mac.init(new SecretKeySpec(toBytes(password), macAlgorithm.toString()));
-
-        return mac;
     }
 
     /**
@@ -175,8 +122,9 @@ public class CryptoLib {
             // initialize the mac
             Mac mac = null;
 
+            // if mac is configured
             if (config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE) {
-                mac = getMac(config.getMacAlgorithm(), password);
+                mac = getMac(config.getMacAlgorithm(), password, initializationVector);
             }
 
             // allocate variables
@@ -195,7 +143,7 @@ public class CryptoLib {
             s += config.getMacAlgorithm().toString().substring(config.getMacAlgorithm().toString().length() - 3);
             s += String.format("%09d", config.getIterations());
             
-            //test: display header
+            //debug: display header
             System.out.println(s.getBytes(StandardCharsets.UTF_8));
             
             bufferedOutputStream.write(s.getBytes(StandardCharsets.UTF_8));
@@ -224,24 +172,6 @@ public class CryptoLib {
             if (mac != null) {
                 bufferedOutputStream.write(mac.doFinal(finaleEncryptedBytes));
             }
-            
-            /* deprecated due to metadata not portable when upload/download
-            
-            // set metadata
-            FileStore store = Files.getFileStore(output.toPath());
-            if (!store.supportsFileAttributeView(UserDefinedFileAttributeView.class))
-                System.err.format("UserDefinedFileAttributeView not supported on %s\n", store);
-        
-            UserDefinedFileAttributeView view = Files.getFileAttributeView(output.toPath(), UserDefinedFileAttributeView.class);
- 
-            view.write("alg", Charset.defaultCharset().encode(config.getAlgorithm().toString()));
-            view.write("keylen", Charset.defaultCharset().encode(config.getKeyLength().toString()));
-            view.write("pbkdf", Charset.defaultCharset().encode(config.getPbkdf().toString()));
-            view.write("macalg", Charset.defaultCharset().encode(config.getMacAlgorithm().toString()));
-            view.write("iv", Charset.defaultCharset().encode(String.valueOf(config.getIvLength())));
-            view.write("iterate", Charset.defaultCharset().encode(String.valueOf(config.getIterations())));
-            
-            */
             
         } finally {
             closeStream(bufferedInputStream);
@@ -291,12 +221,21 @@ public class CryptoLib {
                 throw new IOException("File doesn't contain information for decryption");
             }
             
+            // read the initialization vector
+            byte[] initializationVector = new byte[config.getIvLength()];
+
+            int ivBytesRead = bufferedInputStream.read(initializationVector);
+
+            if (ivBytesRead < config.getIvLength()) {
+                throw new IOException("File doesn't contain an IV");
+            }
+            
             // read the mac given in file
             Mac mac = null;
             byte[] recMac = null;
             
             if (config.getMacAlgorithm() != CryptoInstance.MacAlgorithm.NONE) {
-                mac = getMac(config.getMacAlgorithm(), password);
+                mac = getMac(config.getMacAlgorithm(), password, initializationVector);
 
                 recMac = new byte[mac.getMacLength()];
 
@@ -311,20 +250,6 @@ public class CryptoLib {
 
                 randomAccessFile.close();
             }
-            
-            // read the initialization vector
-            byte[] initializationVector = new byte[config.getIvLength()];
-
-            int ivBytesRead = bufferedInputStream.read(initializationVector);
-
-            if (ivBytesRead < config.getIvLength()) {
-                throw new IOException("File doesn't contain an IV");
-            }
-
-            // initialize the cipher
-            cipher.init(Cipher.DECRYPT_MODE,
-                    deriveKey(password, initializationVector),
-                    getAlgorithmParameterSpec(config.getMode(), initializationVector));
 
             // allocate loop buffers and variables
             int bytesRead;
@@ -356,8 +281,8 @@ public class CryptoLib {
                     break;
                 }
                 
-                //test: display buffer
-                System.out.println("read_for_mac: " + inputStreamBuffer.toString());
+                //debug: display buffer
+                // System.out.println("read_for_mac: " + inputStreamBuffer.toString());
                 
                 // reduce the number of bytes left
                 bytesLeft_pre -= numBytesToProcess;
@@ -376,8 +301,13 @@ public class CryptoLib {
                 throw new GeneralSecurityException("Received mac is different from calculated");
                 
             } else {
-            
+                // revisit data by resetting cursor
                 bufferedInputStream.reset();
+                
+                // initialize the cipher
+                cipher.init(Cipher.DECRYPT_MODE,
+                        deriveKey(password, initializationVector),
+                        getAlgorithmParameterSpec(config.getMode(), initializationVector));
                 
                 // decrypt
                 while ((bytesRead = bufferedInputStream.read(inputStreamBuffer)) > 0) {
@@ -391,8 +321,8 @@ public class CryptoLib {
                     // overflow should not occur. protect with safe conversion just in case
                     bufferedOutputStream.write(cipher.update(inputStreamBuffer, 0, Math.toIntExact(numBytesToProcess)));
 
-                    //test: display buffer
-                    System.out.println("read_for_decrypt: " + inputStreamBuffer.toString());
+                    //debug: display buffer
+                    // System.out.println("read_for_decrypt: " + inputStreamBuffer.toString());
 
                     // reduce the number of bytes left
                     bytesLeft -= numBytesToProcess;
@@ -409,25 +339,44 @@ public class CryptoLib {
             closeStream(bufferedOutputStream);
         }
     }
-
+    
     /**
-     * Derives an AES (javax.crypto.spec.SecretKeySpec) using a password and iteration count.
+     * Initialize a javax.crypto.Mac instance
+     *
+     * @param macAlgorithm 
+     * @param password      password for deriving key
+     * @return an initialized javax.crypto.Mac
+     * @throws GeneralSecurityException if MAC initialization fails
+     */
+    private Mac getMac(CryptoInstance.MacAlgorithm macAlgorithm, char[] password, byte[] initializationVector)
+            throws GeneralSecurityException, IOException {
+        
+        Mac mac = Mac.getInstance(macAlgorithm.toString());
+        byte[] key = derivePbkdfKeyBytes(password, extendSalt(initializationVector));
+        
+        mac.init(new SecretKeySpec(key, macAlgorithm.toString()));
+
+        return mac;
+    }
+    
+    /**
+     * Derives an AES/DESede (javax.crypto.spec.SecretKeySpec) using a password and iteration count.
      *
      * @param password              the password
      * @param initializationVector  used for PBKDF
-     * @return an AES (javax.crypto.spec.SecretKeySpec)
+     * @return an AES/DESede (javax.crypto.spec.SecretKeySpec)
      * @throws GeneralSecurityException if initialization, decryption, or the MAC comparison fails
      */
-    private SecretKey deriveKey(char[] password, byte[] initializationVector) throws GeneralSecurityException {
+    private SecretKey deriveKey(char[] password, byte[] initializationVector) throws GeneralSecurityException, IOException {
         byte[] key = null;
 
-        key = derivePbkdfKeyBytes(password, generateSalt());
+        key = derivePbkdfKeyBytes(password, extendSalt(initializationVector));
 
         return new SecretKeySpec(key, config.getAlgorithm().toString());
     }
 
-    private byte[] derivePbkdfKeyBytes(char[] password, byte[] salt)
-            throws InvalidKeySpecException, NoSuchAlgorithmException {
+    private byte[] derivePbkdfKeyBytes(char[] password, byte[] salt) throws InvalidKeySpecException, NoSuchAlgorithmException {
+        
         return SecretKeyFactory.getInstance(config.getPbkdf().toString())
                 .generateSecret(
                         new PBEKeySpec(
@@ -467,7 +416,7 @@ public class CryptoLib {
     }
     
     /**
-     * Generates a salt with a constant length of 256 bits using java.security.SecureRandom as RNG
+     * Generates a salt with a constant length of 256 bits using java.security.SecureRandom as RNG (TBD for adopting)
      *
      * @return a byte array
      */
@@ -480,13 +429,34 @@ public class CryptoLib {
     }
 
     /**
+     * Extends IV length for using as salt when algorithms use IV less than or equal to 64 bits 
+     *
+     * @return a byte array
+     */
+    private byte[] extendSalt(byte[] initializationVector) throws IOException {
+        if (initializationVector.length <= 8) {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+            // temporary approach. will advance to XOR with fixed string or append in file in the future
+            byteArrayOutputStream.write(initializationVector);
+            byteArrayOutputStream.write(initializationVector);
+        
+            return byteArrayOutputStream.toByteArray();
+        } else {
+            return initializationVector;
+        }
+    }
+
+
+    /**
      * Close streams after usage.
      */
     private void closeStream(Closeable stream) {
         if (stream != null) {
             try {
                 stream.close();
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to close stream resources: " + e.getMessage());
             }
         }
     }
