@@ -20,17 +20,17 @@ $ java Launcher.java
 Follow the instruction on the command interface of the Launcher, select the mode and configurations to encrypt/decrypt a file.
 
 # Input
-```sh
+`
 file_name.file_extension
-```
+`
 Please place your file at the following location
   UNIX-based OS:  (user home directory)/javaenc
   Windows OS:     C:\\(user directory)\\javaenc
   
 # Output
-```sh
+`
 file_name.file_extension
-```
+`
 file will be generated under the same directory
   UNIX-based OS:  (user home directory)/javaenc
   Windows OS:     C:\\(user directory)\\javaenc
