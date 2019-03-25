@@ -92,8 +92,13 @@ public class CryptoInstance {
         AES("AES"),
         DESede("DESede");
 
+        /*
+        DESede("DESede", "01");
+        AES("AES", "02"),
+        */
         private String value;
-
+        private String headerCode;
+        
         Algorithm(String value) {
             this.value = value;
         }
