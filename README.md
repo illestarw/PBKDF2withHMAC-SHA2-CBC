@@ -7,14 +7,11 @@ To serve as an extendable framework that process cryptographic safe encryption a
 
 
 ## Technology supported 
-* Cipher
-Triple DES, AES 
+* Cipher: Triple DES, AES 
 
-* Mode
-CBC
+* Mode: CBC
 
-* HMAC
-SHA-256, SHA-512
+* HMAC: SHA-256, SHA-512
 
 
 ## Usage
